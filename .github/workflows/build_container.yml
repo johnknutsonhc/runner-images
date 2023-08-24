@@ -16,11 +16,12 @@ jobs:
         uses: azure/docker-login@v1
         with:
           login-server: 'cloudopsmfzqb55r.azurecr.io'
-          # username: '<username>'
-          # password: '<password>'
+          username: '${{ vars.ARM_CLIENT_ID }}' # IT-Dev-RunnerImageBuilder
+          password: '${{ secrets.ARM_CLIENT_SECRET }}'
       - name: Build and push
         uses: docker/build-push-action@v4
         with:
+          context: docker
           file: Dockerfile.Ubuntu2004
           push: true
           tags: johnknutsonhc/ci-ubuntu:20.04
