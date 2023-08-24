@@ -27,6 +27,9 @@ Function CreateAzureVMFromPackerTemplate {
         .PARAMETER AzureLocation
             The location where the Azure virtual machine will be provisioned. Example: "eastus"
 
+        .PARAMETER ResourceSuffix
+             Suffix to interpolate into resource names. Example: "Ubuntu2204"
+
         .EXAMPLE
             CreateAzureVMFromPackerTemplate -SubscriptionId {YourSubscriptionId} -ResourceGroupName {ResourceGroupName} -TemplateFile "C:\BuildVmImages\temporaryTemplate.json" -VirtualMachineName "testvm1" -AdminUsername "shady1" -AdminPassword "SomeSecurePassword1" -AzureLocation "eastus"
     #>
@@ -44,11 +47,17 @@ Function CreateAzureVMFromPackerTemplate {
         [Parameter(Mandatory = $True)]
         [string] $AdminPassword,
         [Parameter(Mandatory = $True)]
-        [string] $AzureLocation
+        [string] $AzureLocation,
+        [Parameter(Mandatory = $False)]
+        [string] $ResourceSuffix
     )
 
     $vmSize = "Standard_DS2_v2"
-    $guid = [System.GUID]::NewGuid().ToString().ToUpper()
+    if ($ResourceSuffix -ne $null) {
+        $guid = $ResourceSuffix
+    } else {
+        $guid = [System.GUID]::NewGuid().ToString().ToUpper()
+    }
     $vnetName = $env:UserName + "vnet-" + $guid
     $subnetName = $env:UserName + "subnet-" + $guid
     $nicName = $env:UserName + "nic-" + $guid
@@ -60,6 +69,7 @@ Function CreateAzureVMFromPackerTemplate {
 
     Write-Host "`nCreating a network interface controller (NIC)"
     ($nic = az network nic create -g $ResourceGroupName -l $AzureLocation -n $nicName --subnet $subnetId --subscription $subscriptionId -o json)
+    Start-Sleep -Seconds 5 # on occasion the NewNIC.id comes up blank, lets give it a second to create
     $networkId = ($nic | ConvertFrom-Json).NewNIC.id
 
     Write-Host "`nCreating a public IP address"
@@ -70,7 +80,7 @@ Function CreateAzureVMFromPackerTemplate {
     az network nic ip-config update -g $ResourceGroupName -n ipconfig1 --nic-name $nicName --public-ip-address $publicIpId --subscription $subscriptionId
 
     Write-Host "`nCreating the VM"
-    az deployment group create -g $ResourceGroupName -n $VirtualMachineName --subscription $subscriptionId --template-file $templateFilePath --parameters vmSize=$vmSize vmName=$VirtualMachineName adminUserName=$AdminUsername adminPassword=$AdminPassword networkInterfaceId=$networkId
+    az deployment group create -g $ResourceGroupName -n $VirtualMachineName --subscription $subscriptionId --template-file $templateFilePath --parameters vmSize=$vmSize vmName=$VirtualMachineName adminUserName=$AdminUsername adminPassword="${AdminPassword}" networkInterfaceId=$networkId
 
     Write-Host "`nCreated in ${ResourceGroupName}:`n  vnet ${vnetName}`n  subnet ${subnetName}`n  nic ${nicName}`n  publicip ${publicIpName}`n  vm ${VirtualMachineName}"
 }

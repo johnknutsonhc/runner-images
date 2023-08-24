@@ -401,3 +401,4 @@ images/*/*-temp.json
 infra/*.tfstate
 infra/*.tfplan
 .env.local.ps1
+.env.local
