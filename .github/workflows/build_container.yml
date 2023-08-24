@@ -21,7 +21,7 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v4
         with:
-          context: docker
+          context: "{{defaultContext}}:docker"
           file: Dockerfile.Ubuntu2004
           push: true
           tags: johnknutsonhc/ci-ubuntu:20.04
